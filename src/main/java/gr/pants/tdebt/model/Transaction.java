@@ -14,16 +14,16 @@ import java.time.LocalDate;
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Table(name = "transactions")
-public class Transaction extends AbstractEntity{
+public class Transaction extends AbstractAuditEntity{
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "debt_id", nullable = false)
+    @JoinColumn(name = "debt_id", nullable = false, updatable = false)
     private Debt debt;
 
     @Column(nullable = false)
     private LocalDate date;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)

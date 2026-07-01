@@ -16,14 +16,14 @@ import java.math.BigDecimal;
 @Table(name = "debts")
 public class Debt extends AbstractEntity{
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String debtorName;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "debt_type", nullable = false)
     private DebtType type;
 
-    @Column(precision = 19, scale = 4)
+    @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal balance;
 
     private String description;
