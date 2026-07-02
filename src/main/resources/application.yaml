@@ -19,3 +19,8 @@ spring:
     baseline-on-migrate: true
     schemas: tdebtapp
     default-schema: tdebtapp
+
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET_KEY}
+      expiration: ${JWT_EXPIRATION}
