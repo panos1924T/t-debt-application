@@ -1,4 +1,4 @@
-package gr.pants.tdebt.core;
+package gr.pants.tdebt.core.enums;
 
 public enum DebtType {
 
