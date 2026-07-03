@@ -87,28 +87,52 @@ public class UserServiceImpl implements IUserService {
         userRepository.save(user);
     }
 
+    @PreAuthorize("hasAuthority('VIEW_USERS')")
+    @Transactional(readOnly = true)
     @Override
     public UserReadOnlyDTO getUserByUuid(UUID uuid) {
-        return null;
+
+        User user = userRepository.findUserByUuid(uuid)
+                .orElseThrow(() -> new EntityNotFoundException("User", "User with uuid=" + uuid + " not found"));
+
+        return userMapper.toReadOnlyDTO(user);
     }
 
+    @PreAuthorize("hasAuthority('VIEW_USERS') or " +
+            "hasAuthority('VIEW_ONLY_USER') and #uuid == authentication.principal.uuid")
+    @Transactional(readOnly = true)
     @Override
     public UserReadOnlyDTO getUserByUuidDeletedFalse(UUID uuid) {
-        return null;
+        User user = userRepository.findUserByUuidAndDeletedFalse(uuid)
+                .orElseThrow(() -> new EntityNotFoundException("User", "User with uuid=" + uuid + " not found"));
+
+        return userMapper.toReadOnlyDTO(user);
     }
 
+    @PreAuthorize("hasAuthority('VIEW_USERS')")
+    @Transactional(readOnly = true)
     @Override
     public Page<UserReadOnlyDTO> getAllUsers(Pageable pageable) {
-        return null;
+
+        Page<User> userPage = userRepository.findAll(pageable);
+        log.debug("Get paginated returned successfully page={} and size={}", userPage.getNumber(), userPage.getSize());
+
+        return userPage.map(userMapper::toReadOnlyDTO);
     }
 
+    @PreAuthorize("hasAuthority('VIEW_USERS')")
+    @Transactional(readOnly = true)
     @Override
     public Page<UserReadOnlyDTO> getAllUsersDeletedFalse(Pageable pageable) {
-        return null;
+
+        Page<User> userPage = userRepository.findAllByDeletedFalse(pageable);
+        log.debug("Get paginated returned successfully page={} and size={}", userPage.getNumber(), userPage.getSize());
+
+        return userPage.map(userMapper::toReadOnlyDTO);
     }
 
     @Override
     public boolean isUserExists(String email) {
-        return false;
+        return userRepository.existsUserByEmail(email);
     }
 }
