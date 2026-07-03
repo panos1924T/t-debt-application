@@ -36,9 +36,9 @@ public class AdminSeeder implements CommandLineRunner {
 
         if (userRepository.findUserByEmail(adminEmail).isEmpty()) {
 
-            Optional<Role> roleOpt = roleRepository.findRoleByName("ROLE_ADMIN");
+            Optional<Role> roleOpt = roleRepository.findRoleByName("ADMIN");
             if (roleOpt.isEmpty()) {
-                System.err.println("[Seeder Error] ROLE_ADMIN not found. Admin creation aborted.");
+                System.err.println("[Seeder Error] ADMIN role not found. Admin creation aborted.");
                 return;
             }
 
