@@ -20,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -73,9 +74,17 @@ public class UserServiceImpl implements IUserService {
         return userMapper.toReadOnlyDTO(user);
     }
 
+    @PreAuthorize("hasAuthority('DELETE_USER') or " +
+            "hasAuthority('DELETE_ONLY_USER') and #uuid == authentication.principal.uuid")
+    @Transactional
     @Override
     public void deleteUser(UUID uuid) {
 
+        User user = userRepository.findUserByUuidAndDeletedFalse(uuid)
+                .orElseThrow(() -> new EntityNotFoundException("User", "User with uuid=" + uuid + " not found"));
+
+        user.softDelete(Instant.now());
+        userRepository.save(user);
     }
 
     @Override
