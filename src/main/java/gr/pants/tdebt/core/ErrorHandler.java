@@ -106,6 +106,18 @@ public class ErrorHandler {
                 ));
     }
 
+    @ExceptionHandler(DebtHasTransactionsException.class)
+    public ResponseEntity<ErrorResponseDTO> handleHasTransactions(DebtHasTransactionsException e) {
+        log.warn("Cannot delete Debt with existing transactions. message={}", e.getMessage());
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(new ErrorResponseDTO(
+                        e.getErrorCode(),
+                        e.getMessage()
+                ));
+    }
+
     @ExceptionHandler(PasswordMismatchException.class)
     public ResponseEntity<ErrorResponseDTO> handlePasswordMismatch(PasswordMismatchException e) {
         log.warn("Password mismatch. message={}", e.getMessage());
