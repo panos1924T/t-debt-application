@@ -74,62 +74,56 @@ public class TransactionServiceImpl implements ITransactionService {
     @Transactional
     public TransactionReadOnlyDTO updateTransaction(UUID debtUuid, TransactionUpdateDTO updateDTO, UUID userUuid) {
 
-        // 1. Έλεγχος Debt (Ownership & Archive status)
         Debt debt = debtRepository.findByUuidAndUser_UuidAndDeletedFalse(debtUuid, userUuid)
                 .orElseThrow(() -> new EntityNotFoundException("Debt", "Debt with uuid=" + debtUuid + " not found"));
 
         if (debt.getStatus() == DebtStatus.ARCHIVED) {
-            throw new InvalidArgumentException("Debt", "Cannot add corrections to an archived debt");
+            throw new InvalidArgumentException("Debt", "Cannot modify transactions on an archived debt");
         }
 
-        // 2. Έλεγχος Original Transaction (Ownership στο ίδιο Debt)
         Transaction original = transactionRepository
                 .findByUuidAndDebt_Uuid(updateDTO.correctedTransactionUuid(), debtUuid)
                 .orElseThrow(() -> new EntityNotFoundException("Transaction",
                         "Original transaction with uuid=" + updateDTO.correctedTransactionUuid() + " not found on this debt"));
 
-        // 3. Anti-Chaining Rule: Απαγόρευση πολλαπλών διορθώσεων στην ίδια αρχική κίνηση
+        // Calculating Delta (new contribution - original contribution) that matches every scenario.
+        BigDecimal originalContribution = original.getAction() == TransactionAction.INCREASE
+                ? original.getAmount() : original.getAmount().negate();
+        BigDecimal newContribution = updateDTO.action() == TransactionAction.INCREASE
+                ? updateDTO.amount() : updateDTO.amount().negate();
+        BigDecimal delta = newContribution.subtract(originalContribution);
+
+        // Update only metadata in the same record that no needs to create new record if amount AND action are the same => no financial change.
+        if (delta.compareTo(BigDecimal.ZERO) == 0) {
+            original.setDate(updateDTO.date());
+            original.setNote(updateDTO.note());
+            Transaction saved = transactionRepository.save(original);
+            log.info("Metadata-only update on Transaction UUID: {}", saved.getUuid());
+            return transactionMapper.toReadOnlyDTO(saved);
+        }
+
+        // Anti-chaining check. editing only the last edited version.
         if (transactionRepository.existsByCorrectedTransaction_Id(original.getId())) {
             throw new InvalidArgumentException("Transaction",
-                    "This transaction has already been corrected. Please correct the latest correction instead.");
+                    "Transaction with uuid=" + original.getUuid() +" has already been corrected. Please correct the latest correction instead.");
         }
 
-        // 4. Υπολογισμός νέου Balance (Με χρήση Delta)
-        BigDecimal resultingBalance;
-        if (updateDTO.action() == TransactionAction.INCREASE) {
-            resultingBalance = debt.getBalance().add(updateDTO.amount());
-        } else {
-            resultingBalance = debt.getBalance().subtract(updateDTO.amount());
-        }
+        BigDecimal resultingBalance = debt.getBalance().add(delta);
 
-        // 5. Bounded Negative Guard (Ο Έξυπνος Φρουρός)
-        // Επιτρέπουμε το αρνητικό balance, ΑΛΛΑ η ζημιά δεν μπορεί να υπερβαίνει την αξία της αρχικής κίνησης.
-        if (resultingBalance.compareTo(BigDecimal.ZERO) < 0) {
-            BigDecimal maxAllowedNegative = original.getAmount();
-
-            if (resultingBalance.abs().compareTo(maxAllowedNegative) > 0) {
-                throw new InsufficientBalanceException("Transaction","Correction would result in a negative balance (-"
-                        + resultingBalance.abs() + ") that exceeds the original transaction's magnitude ("
-                        + maxAllowedNegative + "). This correction is mathematically invalid.");
-            }
-        }
-
-        // 6. Δημιουργία και Αποθήκευση της Διόρθωσης
         Transaction correction = new Transaction();
         correction.setDate(updateDTO.date());
-        correction.setAmount(updateDTO.amount());
-        correction.setAction(updateDTO.action());
+        correction.setAmount(delta.abs());
+        correction.setAction(delta.signum() > 0 ? TransactionAction.INCREASE : TransactionAction.DECREASE);
         correction.setNote(updateDTO.note());
         correction.setCorrectedTransaction(original);
         correction.setDebt(debt);
 
         debt.setBalance(resultingBalance);
-
         debtRepository.save(debt);
         Transaction saved = transactionRepository.save(correction);
 
-        log.info("Correction UUID: {} applied to Original UUID: {}. New Balance: {}",
-                saved.getUuid(), original.getUuid(), debt.getBalance());
+        log.info("Correction UUID: {} applied to Original UUID: {}. Delta: {}. New Balance: {}",
+                saved.getUuid(), original.getUuid(), delta, debt.getBalance());
         return transactionMapper.toReadOnlyDTO(saved);
     }
 

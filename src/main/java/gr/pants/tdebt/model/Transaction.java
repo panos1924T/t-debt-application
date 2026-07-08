@@ -33,6 +33,6 @@ public class Transaction extends AbstractAuditEntity{
     private String note;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "corrected_transaction_id")
+    @JoinColumn(name = "corrected_transaction_id", updatable = false)
     private Transaction correctedTransaction;
 }
