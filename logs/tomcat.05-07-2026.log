@@ -1,4 +1,0 @@
-2026-07-05 17:28:48 INFO  o.a.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
-2026-07-05 17:28:48 INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
-2026-07-05 17:28:48 INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/11.0.22]
-2026-07-05 17:28:51 INFO  o.a.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
